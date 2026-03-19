@@ -20,10 +20,10 @@ set -e
 
 STATE_DIR="${OPENCLAW_STATE_DIR:-/data}"
 CONFIG_PATH="$STATE_DIR/openclaw.json"
-DEFAULT_MODEL="${OPENCLAW_DEFAULT_MODEL:-google/gemini-3.1-pro}"
-WA_MODEL="${OPENCLAW_WHATSAPP_AGENT_MODEL:-google/gemini-3-flash-preview}"
-MARKETING_MODEL="${OPENCLAW_MARKETING_MODEL:-google/gemini-3-flash-preview}"
-MAIN_MODEL="${OPENCLAW_MAIN_MODEL:-google/gemini-3.1-pro}"
+DEFAULT_MODEL="${OPENCLAW_DEFAULT_MODEL:-anthropic/claude-sonnet-4-6}"
+WA_MODEL="${OPENCLAW_WHATSAPP_AGENT_MODEL:-anthropic/claude-sonnet-4-6}"
+MARKETING_MODEL="${OPENCLAW_MARKETING_MODEL:-anthropic/claude-sonnet-4-6}"
+MAIN_MODEL="${OPENCLAW_MAIN_MODEL:-anthropic/claude-sonnet-4-6}"
 WA_PLUGIN="${OPENCLAW_WHATSAPP_PLUGIN:-false}"
 
 # Validate required env vars
@@ -56,13 +56,17 @@ if [ -z "$META" ]; then
 fi
 
 # Write the canonical config
+# NOTE: agents.defaults.models entries (alias + params) are valid Zod schema
+# and survive doctor --fix. The Anthropic plugin auto-discovers models from
+# ANTHROPIC_API_KEY env var. We only declare aliases and params here.
 cat > "$CONFIG_PATH" << ENDCONFIG
 {
   "meta": $META,
   "agents": {
     "defaults": {
       "model": {
-        "primary": "$DEFAULT_MODEL"
+        "primary": "$DEFAULT_MODEL",
+        "fallbacks": ["google/gemini-3.1-pro", "google/gemini-3-flash-preview"]
       },
       "models": {
         "google/gemini-3.1-pro": {
@@ -83,6 +87,18 @@ cat > "$CONFIG_PATH" << ENDCONFIG
           "alias": "lite",
           "params": {
             "showThinking": false
+          }
+        },
+        "anthropic/claude-sonnet-4-6": {
+          "alias": "sonnet",
+          "params": {
+            "cacheRetention": "short"
+          }
+        },
+        "anthropic/claude-opus-4-6": {
+          "alias": "opus",
+          "params": {
+            "cacheRetention": "short"
           }
         }
       },
@@ -141,7 +157,7 @@ cat > "$CONFIG_PATH" << ENDCONFIG
           "deny": [
             "gateway", "process", "cron", "nodes", "canvas",
             "browser", "write", "edit", "subagents",
-            "sessions_spawn"
+            "sessions_spawn", "send", "message", "sessions_send"
           ]
         }
       }
@@ -220,11 +236,7 @@ cat > "$CONFIG_PATH" << ENDCONFIG
     },
     "auth": {
       "mode": "token",
-      "token": "${OPENCLAW_GATEWAY_TOKEN}",
-      "rateLimit": {
-        "windowMs": 60000,
-        "maxRequests": 30
-      }
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
   },
   "cron": {
@@ -268,6 +280,21 @@ find "$STATE_DIR" -name "BOOTSTRAP.md" -delete 2>/dev/null || true
 
 # Let doctor fix any config issues (removes unrecognized keys, adds missing fields)
 node openclaw.mjs doctor --fix 2>/dev/null || true
+
+# Post-doctor: use CLI to register Anthropic models.
+# The Anthropic plugin auto-discovers from ANTHROPIC_API_KEY but needs
+# the model set as default via CLI so it appears in the configured list.
+# These CLI commands write to openclaw.json in a doctor-compatible format.
+node openclaw.mjs models set "$DEFAULT_MODEL" 2>/dev/null || true
+node openclaw.mjs models aliases add opus anthropic/claude-opus-4-6 2>/dev/null || true
+node openclaw.mjs models aliases add sonnet anthropic/claude-sonnet-4-6 2>/dev/null || true
+node openclaw.mjs models aliases add gemini google/gemini-3.1-pro 2>/dev/null || true
+node openclaw.mjs models aliases add flash google/gemini-3-flash-preview 2>/dev/null || true
+node openclaw.mjs models aliases add lite google/gemini-3.1-flash-lite-preview 2>/dev/null || true
+node openclaw.mjs models fallbacks clear 2>/dev/null || true
+node openclaw.mjs models fallbacks add google/gemini-3.1-pro 2>/dev/null || true
+node openclaw.mjs models fallbacks add google/gemini-3-flash-preview 2>/dev/null || true
+echo "[entrypoint] Models configured: default=$DEFAULT_MODEL, fallbacks=gemini-pro,gemini-flash"
 
 echo "[entrypoint] Agents: main, operations, marketing, whatsapp"
 echo "[entrypoint] Models: operations=$DEFAULT_MODEL | marketing=$MARKETING_MODEL | whatsapp=$WA_MODEL | main=$MAIN_MODEL"
