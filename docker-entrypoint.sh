@@ -12,7 +12,7 @@
 # Optional env vars:
 #   OPENCLAW_STATE_DIR (default: /data)
 #   OPENCLAW_DEFAULT_MODEL (default: anthropic/claude-sonnet-4-6)
-#   OPENCLAW_WHATSAPP_AGENT_MODEL (default: anthropic/claude-sonnet-4-6)
+#   OPENCLAW_WHATSAPP_AGENT_MODEL (default: google/gemini-3.1-pro-preview)
 #   OPENCLAW_MARKETING_MODEL, OPENCLAW_MAIN_MODEL
 #   OPENCLAW_WHATSAPP_PLUGIN (default: false)
 
@@ -21,7 +21,7 @@ set -e
 STATE_DIR="${OPENCLAW_STATE_DIR:-/data}"
 CONFIG_PATH="$STATE_DIR/openclaw.json"
 DEFAULT_MODEL="${OPENCLAW_DEFAULT_MODEL:-anthropic/claude-sonnet-4-6}"
-WA_MODEL="${OPENCLAW_WHATSAPP_AGENT_MODEL:-anthropic/claude-sonnet-4-6}"
+WA_MODEL="${OPENCLAW_WHATSAPP_AGENT_MODEL:-google/gemini-3.1-pro-preview}"
 MARKETING_MODEL="${OPENCLAW_MARKETING_MODEL:-anthropic/claude-sonnet-4-6}"
 MAIN_MODEL="${OPENCLAW_MAIN_MODEL:-anthropic/claude-sonnet-4-6}"
 WA_PLUGIN="${OPENCLAW_WHATSAPP_PLUGIN:-false}"
@@ -66,7 +66,7 @@ cat > "$CONFIG_PATH" << ENDCONFIG
     "defaults": {
       "model": {
         "primary": "$DEFAULT_MODEL",
-        "fallbacks": ["google/gemini-3.1-pro", "google/gemini-3-flash-preview"]
+        "fallbacks": ["google/gemini-3.1-pro-preview", "google/gemini-3-flash-preview"]
       },
       "models": {
         "google/gemini-3.1-pro": {
@@ -100,6 +100,13 @@ cat > "$CONFIG_PATH" << ENDCONFIG
           "params": {
             "cacheRetention": "short"
           }
+        },
+        "google/gemini-3.1-pro-preview": {
+          "alias": "pro-preview",
+          "params": {
+            "thinkingMode": "high",
+            "showThinking": false
+          }
         }
       },
       "sandbox": {
@@ -111,7 +118,7 @@ cat > "$CONFIG_PATH" << ENDCONFIG
       "heartbeat": {
         "every": "2h"
       },
-      "maxConcurrent": 2,
+      "maxConcurrent": 3,
       "subagents": {
         "maxConcurrent": 4
       }
@@ -241,7 +248,7 @@ cat > "$CONFIG_PATH" << ENDCONFIG
   },
   "cron": {
     "enabled": true,
-    "maxConcurrentRuns": 2,
+    "maxConcurrentRuns": 3,
     "sessionRetention": "24h"
   },
   "plugins": {
@@ -291,10 +298,11 @@ node openclaw.mjs models aliases add sonnet anthropic/claude-sonnet-4-6 2>/dev/n
 node openclaw.mjs models aliases add gemini google/gemini-3.1-pro 2>/dev/null || true
 node openclaw.mjs models aliases add flash google/gemini-3-flash-preview 2>/dev/null || true
 node openclaw.mjs models aliases add lite google/gemini-3.1-flash-lite-preview 2>/dev/null || true
+node openclaw.mjs models aliases add pro-preview google/gemini-3.1-pro-preview 2>/dev/null || true
 node openclaw.mjs models fallbacks clear 2>/dev/null || true
-node openclaw.mjs models fallbacks add google/gemini-3.1-pro 2>/dev/null || true
+node openclaw.mjs models fallbacks add google/gemini-3.1-pro-preview 2>/dev/null || true
 node openclaw.mjs models fallbacks add google/gemini-3-flash-preview 2>/dev/null || true
-echo "[entrypoint] Models configured: default=$DEFAULT_MODEL, fallbacks=gemini-pro,gemini-flash"
+echo "[entrypoint] Models configured: default=$DEFAULT_MODEL, fallbacks=gemini-pro-preview,gemini-flash"
 
 echo "[entrypoint] Agents: main, operations, marketing, whatsapp"
 echo "[entrypoint] Models: operations=$DEFAULT_MODEL | marketing=$MARKETING_MODEL | whatsapp=$WA_MODEL | main=$MAIN_MODEL"
