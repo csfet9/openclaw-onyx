@@ -220,7 +220,11 @@ cat > "$CONFIG_PATH" << ENDCONFIG
     },
     "auth": {
       "mode": "token",
-      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+      "token": "${OPENCLAW_GATEWAY_TOKEN}",
+      "rateLimit": {
+        "windowMs": 60000,
+        "maxRequests": 30
+      }
     }
   },
   "cron": {
