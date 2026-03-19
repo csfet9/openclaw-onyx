@@ -20,9 +20,9 @@ set -e
 
 STATE_DIR="${OPENCLAW_STATE_DIR:-/data}"
 CONFIG_PATH="$STATE_DIR/openclaw.json"
-DEFAULT_MODEL="${OPENCLAW_DEFAULT_MODEL:-anthropic/claude-sonnet-4-6}"
-WA_MODEL="${OPENCLAW_WHATSAPP_AGENT_MODEL:-anthropic/claude-sonnet-4-6}"
-MARKETING_MODEL="${OPENCLAW_MARKETING_MODEL:-anthropic/claude-sonnet-4-6}"
+DEFAULT_MODEL="${OPENCLAW_DEFAULT_MODEL:-google/gemini-3.1-pro}"
+WA_MODEL="${OPENCLAW_WHATSAPP_AGENT_MODEL:-google/gemini-3-flash-preview}"
+MARKETING_MODEL="${OPENCLAW_MARKETING_MODEL:-google/gemini-3-flash-preview}"
 MAIN_MODEL="${OPENCLAW_MAIN_MODEL:-google/gemini-3.1-pro}"
 WA_PLUGIN="${OPENCLAW_WHATSAPP_PLUGIN:-false}"
 
@@ -73,34 +73,16 @@ cat > "$CONFIG_PATH" << ENDCONFIG
           }
         },
         "google/gemini-3-flash-preview": {
-          "alias": "gemini-flash",
+          "alias": "flash",
           "params": {
             "thinkingMode": "high",
             "showThinking": false
           }
         },
         "google/gemini-3.1-flash-lite-preview": {
-          "alias": "gemini-lite",
+          "alias": "lite",
           "params": {
             "showThinking": false
-          }
-        },
-        "anthropic/claude-sonnet-4-6": {
-          "alias": "sonnet",
-          "params": {
-            "cacheRetention": "short"
-          }
-        },
-        "anthropic/claude-opus-4-6": {
-          "alias": "opus",
-          "params": {
-            "cacheRetention": "short"
-          }
-        },
-        "anthropic/claude-haiku-4-5": {
-          "alias": "haiku",
-          "params": {
-            "cacheRetention": "short"
           }
         }
       },
