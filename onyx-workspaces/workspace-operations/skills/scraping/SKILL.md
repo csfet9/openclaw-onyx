@@ -5,49 +5,57 @@ description: Run Apify Idealista actor and ingest results into the database
 
 # Scraping Skill
 
-Run the igolaizola/idealista-scraper Apify actor to scrape Idealista listings for the Axarquia region, then ingest results into the database.
+Run the dz_omar/idealista-scraper-api actor on Apify to scrape Idealista listings for the Axarquia region, then ingest into the database.
 
 ## Actor Details
 
-- **Actor:** `igolaizola/idealista-scraper` on Apify
+- **Actor:** `dz_omar/idealista-scraper-api` on Apify
 - **API Token:** Use `APIFY_API_KEY` environment variable
 - **No Firecrawl needed** — this actor uses Idealista's internal API directly
+- **Returns:** full contactInfo with phone numbers and userType
 
 ## Step 1: Run the Actor
 
 ```
-POST https://api.apify.com/v2/acts/igolaizola~idealista-scraper/runs?token=${APIFY_API_KEY}
+POST https://api.apify.com/v2/acts/dz_omar~idealista-scraper-api/runs?token=${APIFY_API_KEY}
 Content-Type: application/json
 
 {
-  "country": "es",
-  "operation": "rent",
-  "province": "Málaga",
-  "municipalities": ["Nerja", "Torrox", "Torre del Mar", "Vélez-Málaga", "Frigiliana", "Rincón de la Victoria", "Algarrobo", "Cómpeta"],
+  "startUrls": [
+    {"url": "https://www.idealista.com/alquiler-viviendas/nerja-malaga/"},
+    {"url": "https://www.idealista.com/alquiler-viviendas/torrox-malaga/"},
+    {"url": "https://www.idealista.com/alquiler-viviendas/torre-del-mar-velez-malaga-malaga/"},
+    {"url": "https://www.idealista.com/alquiler-viviendas/velez-malaga-malaga/"},
+    {"url": "https://www.idealista.com/alquiler-viviendas/frigiliana-malaga/"},
+    {"url": "https://www.idealista.com/alquiler-viviendas/rincon-de-la-victoria-malaga/"},
+    {"url": "https://www.idealista.com/alquiler-viviendas/algarrobo-malaga/"},
+    {"url": "https://www.idealista.com/alquiler-viviendas/competa-malaga/"},
+    {"url": "https://www.idealista.com/venta-viviendas/nerja-malaga/"},
+    {"url": "https://www.idealista.com/venta-viviendas/torrox-malaga/"},
+    {"url": "https://www.idealista.com/venta-viviendas/torre-del-mar-velez-malaga-malaga/"},
+    {"url": "https://www.idealista.com/venta-viviendas/velez-malaga-malaga/"},
+    {"url": "https://www.idealista.com/venta-viviendas/frigiliana-malaga/"},
+    {"url": "https://www.idealista.com/venta-viviendas/rincon-de-la-victoria-malaga/"},
+    {"url": "https://www.idealista.com/venta-viviendas/algarrobo-malaga/"},
+    {"url": "https://www.idealista.com/venta-viviendas/competa-malaga/"}
+  ],
   "maxItems": 200
 }
 ```
 
-Run TWICE — once for `"operation": "rent"` and once for `"operation": "sale"`.
-
 ## Step 2: Confirm Run Started (DO NOT WAIT)
 
-Extract the `runId` from the response and report to Telegram:
+Extract `runId` from the response and report to Telegram:
 ```
 📊 Scraping started (run: {runId})
 Actor will take 10-30 minutes. Results will be fetched when complete.
 ```
 
-**DO NOT poll or wait.** Move on to other tasks. Check back later.
-
-To check status:
-```
-GET https://api.apify.com/v2/actor-runs/{runId}?token=${APIFY_API_KEY}
-```
+**DO NOT poll or wait.** Move on. Check back later.
 
 ## Step 3: Fetch and Ingest Results
 
-When status is `SUCCEEDED`, fetch results:
+When status is `SUCCEEDED`:
 ```
 GET https://api.apify.com/v2/datasets/{defaultDatasetId}/items?token=${APIFY_API_KEY}&limit=200
 ```
@@ -56,31 +64,31 @@ GET https://api.apify.com/v2/datasets/{defaultDatasetId}/items?token=${APIFY_API
 
 | Actor Field | Onyx Field | Notes |
 |------------|-----------|-------|
-| `propertyCode` | `externalId` | |
+| `propertyCode` or `adid` | `externalId` | |
 | `"idealista"` | `source` | Always |
-| `url` | `url` | |
-| `description` (first 80 chars) or address | `title` | |
+| `url` or `detailWebLink` | `url` | |
+| `description` (first 80 chars) or `address` | `title` | |
 | `price` or `priceInfo.price.amount` | `price` | |
 | `operation` | `operation` | "sale" or "rent" |
-| `propertyType` | `propertyType` | flat→apartment, chalet→house |
-| `rooms` | `bedrooms` | |
-| `bathrooms` | `bathrooms` | |
-| `size` | `areaM2` | |
+| `propertyType` or `extendedPropertyType` | `propertyType` | flat→apartment, chalet→house |
+| `rooms` or `moreCharacteristics.roomNumber` | `bedrooms` | |
+| `bathrooms` or `moreCharacteristics.bathroomNumber` | `bathrooms` | |
+| `size` or `moreCharacteristics.constructedArea` | `areaM2` | |
 | `municipality` | `municipality` | |
 | `address` | `address` | |
-| `latitude` | `latitude` | |
-| `longitude` | `longitude` | |
+| `latitude` or `ubication.latitude` | `latitude` | |
+| `longitude` or `ubication.longitude` | `longitude` | |
 | `multimedia.images[].url` | `photos` | Array of image URLs |
 | `contactInfo.phone1.phoneNumberForMobileDialing` | `phone` | **The phone number** |
 | `contactInfo.commercialName` or `contactInfo.contactName` | `agencyName` | |
 | `contactInfo.userType` | `advertiserType` | "professional" or "private" |
-| `description` | `description` | Full text |
+| `description` or `propertyComment` | `description` | Full text |
 | current time ISO | `scrapedAt` | |
 
-### Owner Type
+### Owner Type from contactInfo.userType
 
-- `contactInfo.userType: "private"` → private owner (WE OUTREACH)
-- `contactInfo.userType: "professional"` → agency (skip outreach)
+- `"private"` or `"particular"` → private owner (WE OUTREACH)
+- `"professional"` → agency (skip outreach)
 
 ## Step 5: Send to Ingest API
 
