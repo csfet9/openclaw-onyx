@@ -153,6 +153,32 @@ Find properties matching buyer criteria.
 
 ### Leads
 
+`GET /leads/lookup?phone={e164}`
+
+**IMPORTANT: Call this for every inbound message.** Returns buyer lead data if this person is a qualified buyer.
+
+**Response:**
+```json
+{
+  "leads": [
+    {
+      "id": "uuid",
+      "phone": "+447700900000",
+      "name": "John Smith",
+      "budgetMin": 150000,
+      "budgetMax": 250000,
+      "bedsMin": 2,
+      "preferredMunicipalities": ["Torrox", "Nerja"],
+      "timeline": "1-3months",
+      "isInSpain": false,
+      "leadScore": "hot",
+      "lifecycleStatus": "qualified",
+      "language": "en"
+    }
+  ]
+}
+```
+
 `POST /leads`
 
 Create a qualified buyer lead after completing the qualification flow.
@@ -176,6 +202,49 @@ Create a qualified buyer lead after completing the qualification flow.
 ```
 
 ### Contacts
+
+`GET /contacts/lookup?phone={e164}`
+
+**IMPORTANT: Call this for every inbound message.** Returns the contact record with response status, language, opt-out flag, and contact history timestamps.
+
+**Response:**
+```json
+{
+  "id": "uuid",
+  "phone": "+34612345678",
+  "name": "Maria Garcia",
+  "language": "es",
+  "source": "outreach",
+  "responseStatus": "replied",
+  "optedOut": false,
+  "firstContactedAt": "2026-03-15T10:00:00Z",
+  "lastContactedAt": "2026-03-19T14:30:00Z"
+}
+```
+
+### Outreach Lookup
+
+`GET /outreach/lookup?phone={e164}`
+
+**IMPORTANT: Call this for every inbound message.** If this person has outreach records, they are a property OWNER we contacted. Returns outreach status, municipality, and property reference.
+
+**Response:**
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "propertyId": "uuid",
+      "phone": "+34612345678",
+      "municipality": "Nerja",
+      "status": "sent",
+      "attempts": 1,
+      "lastAttemptAt": "2026-03-18T10:00:00Z",
+      "createdAt": "2026-03-18T09:55:00Z"
+    }
+  ]
+}
+```
 
 `POST /contacts` — create or update a contact record (upsert by phone)
 
@@ -201,7 +270,30 @@ Use the `contactId` from rate-check response.
 `GET /viewings` — check viewing status (filter: `?propertyId=X` or `?leadId=X`)
 `PATCH /viewings/{id}` — update viewing status
 
-### Conversations (logging)
+### Conversations
+
+`GET /conversations/list?contactId={uuid}&limit=50`
+
+**IMPORTANT: Call this before responding to any inbound message.** Returns full conversation history for a contact, ordered newest first. Default limit is 50 (max 100). Use this to understand the full thread before crafting a response.
+
+**Response:**
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "direction": "inbound",
+      "messageType": "freeform",
+      "templateName": null,
+      "messageBody": "Hola, me interesa su villa",
+      "status": "delivered",
+      "sentAt": "2026-03-16T14:30:00Z"
+    }
+  ],
+  "total": 12,
+  "limit": 50
+}
+```
 
 `POST /conversations`
 
